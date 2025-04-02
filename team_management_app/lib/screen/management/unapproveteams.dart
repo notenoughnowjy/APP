@@ -23,13 +23,15 @@ class _UnApproveTeamsState extends State<UnApproveTeams> {
   }
 
   void loadTeams() async {
+    final apiService = ApiService();
     setState(() => isLoading = true);
-    await ApiService.instance.getunApproveTeams(unapproveTeams);
+    await apiService.getunApproveTeams(unapproveTeams);
     setState(() => isLoading = false);
   }
 
   void approveTeam(int teamid) async {
-    await ApiService.instance.approveTeams(teamid);
+    final apiService = ApiService();
+    await apiService.approveTeams(teamid);
     loadTeams();
   }
 

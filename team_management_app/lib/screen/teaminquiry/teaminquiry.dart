@@ -42,6 +42,7 @@ class _TeaminquiryState extends State<Teaminquiry> {
   }
 
   Future<void> fetchTeams({bool refresh = false}) async {
+    final apiService = ApiService();
     if (isLoading || isEndOfList) return;
     setState(() {
       isLoading = true;
@@ -56,13 +57,12 @@ class _TeaminquiryState extends State<Teaminquiry> {
       }
 
       // 팀 데이터를 API로부터 가져오기
-      final response =
-          await ApiService.instance.teamInquiry(cursor: nextCursor);
+      final response = await apiService.teamInquiry(cursor: nextCursor);
       setState(() {
         // 가져온 데이터를 리스트에 추가
         teamList.addAll(response.results);
         // 다음 페이지를 위한 커서 업데이트
-        nextCursor = ApiService.instance.extractCursorFromUrl(response.next);
+        nextCursor = apiService.extractCursorFromUrl(response.next);
         if (response.results.isEmpty || nextCursor == null) {
           isEndOfList = true; // 더 이상 로드할 데이터가 없음
         }
@@ -95,12 +95,12 @@ class _TeaminquiryState extends State<Teaminquiry> {
 
   // 좋아요 기능 만들기
   Future<void> toggleLike(int teamId, int index) async {
+    final apiService = ApiService();
     try {
       final team = teamList[index];
 
       // 좋아요 API 호출
-      final response =
-          await ApiService.instance.isLikeApi(teamId, team.version);
+      final response = await apiService.isLikeApi(teamId, team.version);
 
       // 서버 응답에 따라 좋아요 상태 및 최신 version 값 업데이트
       setState(() {
@@ -121,9 +121,10 @@ class _TeaminquiryState extends State<Teaminquiry> {
   // API로부터 데이터를 불러오기
   Future<detailteamApiResponse.ApiResponse> detailTeamInquiryAPI(
       int teamId) async {
+    final apiService = ApiService();
     try {
       // API 요청 보내기
-      final response = await ApiService.instance.detailTeamInquiry(teamId);
+      final response = await apiService.detailTeamInquiry(teamId);
       log(response.toString());
       // 요청이 성공적으로 완료되었을 경우, 데이터를 반환
       return response;

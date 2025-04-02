@@ -23,14 +23,16 @@ class UserListWidgetState extends State<UserListWidget> {
   }
 
   void loadUsers() async {
+    final apiService = ApiService();
     setState(() => isLoading = true);
-    await ApiService.instance.getUsers();
+    await apiService.getUsers();
     unapprovedUsers = ApiService.users;
     setState(() => isLoading = false);
   }
 
   void approveUser(int userId) async {
-    await ApiService.instance.approveUsers(userId);
+    final apiService = ApiService();
+    await apiService.approveUsers(userId);
     loadUsers(); // 승인 후 사용자 목록을 다시 불러옴
   }
 

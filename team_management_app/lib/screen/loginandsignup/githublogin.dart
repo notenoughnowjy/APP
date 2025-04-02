@@ -18,7 +18,8 @@ class GithubLogin extends ConsumerStatefulWidget {
 
 class GithubLoginState extends ConsumerState<GithubLogin> {
   void signIn() async {
-    await ApiService.instance.signInWithGitHub(ref);
+    final apiService = ApiService();
+    await apiService.signInWithGitHub(ref);
     bool result = ref
         .read(loginStatusProvider.notifier)
         .state; // 전체 상태관리에서 login 처리가 되었는지 불러오기
@@ -32,10 +33,6 @@ class GithubLoginState extends ConsumerState<GithubLogin> {
         ),
       );
     }
-  }
-
-  void logoutAccount() async {
-    await ApiService.instance.logoutCurrentAccount();
   }
 
   @override
@@ -105,10 +102,6 @@ class GithubLoginState extends ConsumerState<GithubLogin> {
                       textAlign: TextAlign.center,
                       style: TextStyle(
                           color: Color(ButtonColors.gray4), fontSize: 12),
-                    ),
-                    TextButton(
-                      onPressed: logoutAccount,
-                      child: const Text('로그인 계정 삭제'),
                     ),
                   ],
                 ),

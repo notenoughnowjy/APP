@@ -26,6 +26,7 @@ class SignupPageState extends State<SignupPage> {
   List<String> positions = ['프론트엔드', '백엔드', 'AI', '디자이너'];
 
   void attemptRegistration() async {
+    final apiService = ApiService();
     if (studentIdController.text.isEmpty ||
         nameController.text.isEmpty ||
         positionController.text.isEmpty ||
@@ -36,7 +37,7 @@ class SignupPageState extends State<SignupPage> {
       );
       return;
     } else {
-      Map<String, dynamic> result = await ApiService.instance.registerUser(
+      Map<String, dynamic> result = await apiService.registerUser(
           studentIdController.text,
           nameController.text,
           positionController.text,
@@ -92,6 +93,7 @@ class SignupPageState extends State<SignupPage> {
   }
 
   void emailAuthentication() async {
+    final apiService = ApiService();
     if (!isValidEmail(emailController.text)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('유효한 이메일 주소를 입력하세요.')),
@@ -99,7 +101,7 @@ class SignupPageState extends State<SignupPage> {
       return;
     }
 
-    var result = await ApiService.instance.emailSend(emailController.text);
+    var result = await apiService.emailSend(emailController.text);
     if (result == 'success') {
       if (!mounted) return;
       setState(() {
@@ -122,8 +124,9 @@ class SignupPageState extends State<SignupPage> {
   }
 
   void verifyCode() async {
-    bool verified = await ApiService.instance
-        .emailCodeVerify(emailController, verificationCodeController);
+    final apiService = ApiService();
+    bool verified = await apiService.emailCodeVerify(
+        emailController, verificationCodeController);
     if (!mounted) return;
     setState(() {
       emailVerified = verified;

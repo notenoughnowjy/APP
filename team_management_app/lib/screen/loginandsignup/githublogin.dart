@@ -62,26 +62,25 @@ class GithubLoginState extends ConsumerState<GithubLogin> {
                     ),
                     ElevatedButton.icon(
                       style: ButtonStyle(
-                        backgroundColor: MaterialStateProperty.resolveWith(
+                        backgroundColor: WidgetStateProperty.resolveWith(
                           (states) {
-                            if (states.contains(MaterialState.pressed)) {
+                            if (states.contains(WidgetState.pressed)) {
                               return const Color(
                                   ButtonColors.gray4); // 눌렸을 때 색상
                             }
                             return const Color(ButtonColors.black); // 기본 색상
                           },
                         ),
-                        minimumSize: MaterialStateProperty.all<Size>(
+                        minimumSize: WidgetStateProperty.all<Size>(
                           const Size(double.infinity, 45), // 버튼 최소 크기 설정
                         ),
-                        shape:
-                            MaterialStateProperty.all<RoundedRectangleBorder>(
+                        shape: WidgetStateProperty.all<RoundedRectangleBorder>(
                           RoundedRectangleBorder(
                             borderRadius:
                                 BorderRadius.circular(30), // 버튼 모서리 둥글게
                           ),
                         ),
-                        overlayColor: MaterialStateProperty.all<Color>(
+                        overlayColor: WidgetStateProperty.all<Color>(
                           const Color(ButtonColors.white)
                               .withOpacity(0.1), // 눌림 효과 색상
                         ),

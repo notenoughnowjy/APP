@@ -23,6 +23,7 @@ class ApiService {
       baseUrl: dotenv.env['API_SERVER']!,
       connectTimeout: const Duration(seconds: 5),
       receiveTimeout: const Duration(seconds: 3),
+      persistentConnection: true,
       headers: {
         'X-from': 'app',
         'Content-Type': 'application/json',
@@ -31,11 +32,15 @@ class ApiService {
     ),
   );
 
-  static final ApiService _apiService = ApiService._internal();
+  // 싱글톤 구현
+  static final ApiService _instance = ApiService._internal();
+  factory ApiService() => _instance;
 
+  // API 인터셉터 (액세스토큰과 리프레쉬토큰)
   ApiService._internal() {
     _dio.interceptors.add(dio.InterceptorsWrapper(
       onRequest: (options, handler) async {
+        // 액세스 토큰 가져오기
         String? accessToken = await _storage.read(key: 'access');
         if (accessToken != null) {
           options.headers['Authorization'] = 'Bearer $accessToken';
@@ -49,7 +54,9 @@ class ApiService {
         return handler.next(response);
       },
       onError: (dio.DioException e, handler) async {
+        // 401 에러 처리 (토큰 만료)
         if (e.response?.statusCode == 401) {
+          // 리프레시 토큰 요청 중복 방지를 위한 락 구현이 필요할 수 있음
           try {
             if (await _refreshToken()) {
               // 토큰 갱신 성공 시, 원래 요청 다시 시도
@@ -59,13 +66,19 @@ class ApiService {
                 options.headers['Authorization'] = 'Bearer $newAccessToken';
                 log('New Authorization Header Added: Bearer $newAccessToken');
               }
+              // 원래 요청 재시도
               final response = await _dio.fetch(options);
               return handler.resolve(response);
+            } else {
+              // 토큰 갱신 실패 시 로그아웃 로직 호출
+              await _handleLogout();
+              return handler.next(e);
             }
           } catch (error) {
             log('Token refresh error: $error');
+            await _handleLogout();
             return handler.next(e);
-          } finally {}
+          }
         } else {
           log('ERROR[${e.response?.statusCode}] => PATH: ${e.requestOptions.path}');
         }
@@ -75,29 +88,73 @@ class ApiService {
   }
 
   static List<User> users = [];
-  static ApiService get instance => _apiService;
 
-// 토큰 재발급 함수
+  // 리프레시 토큰을 이용하여 새 액세스 토큰 발급
   Future<bool> _refreshToken() async {
     try {
-      final response = await _dio.post(
+      // 리프레시 토큰 가져오기
+      String? refreshToken = await _storage.read(key: 'refresh');
+      if (refreshToken == null) {
+        log('No Refresh Token Found');
+        return false;
+      }
+
+      // 리프레시 토큰을 헤더에 포함하지 않고 바로 요청하는 것이 문제였음
+      // 별도 Dio 인스턴스를 생성하여 인터셉터 없이 요청
+      final tokenDio = dio.Dio(dio.BaseOptions(
+        baseUrl: dotenv.env['API_SERVER']!,
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+      ));
+
+      final response = await tokenDio.post(
         '/api/auth/token/refresh',
+        options: dio.Options(
+          headers: {'Authorization': 'Bearer $refreshToken'},
+        ),
       );
 
       if (response.statusCode == 200) {
-        final newAccessToken = response.headers.value('access');
-        await _storage.write(key: 'access', value: newAccessToken);
-        log('Token refreshed successfully');
-        return true;
+        // response.headers가 아닌 response.data에서 토큰을 가져와야 할 수 있음
+        // API 응답 형식에 따라 수정 필요
+        final newAccessToken =
+            response.data['access_token'] ?? response.headers.value('access');
+
+        if (newAccessToken != null) {
+          await _storage.write(key: 'access', value: newAccessToken);
+
+          // 리프레시 토큰도 새로 발급된 경우 저장
+          final newRefreshToken = response.data['refresh_token'] ??
+              response.headers.value('refresh');
+          if (newRefreshToken != null) {
+            await _storage.write(key: 'refresh', value: newRefreshToken);
+          }
+
+          log('Token refreshed successfully');
+          return true;
+        }
       }
 
+      // 401 응답은 리프레시 토큰도 만료된 경우
       if (response.statusCode == 401) {
-        // TODO 로그아웃 구현
+        await _handleLogout();
       }
+
+      return false;
     } catch (e) {
       log('Token refresh failed: $e');
+      return false;
     }
-    return false;
+  }
+
+  // 로그아웃 처리 메서드
+  Future<void> _handleLogout() async {
+    // 토큰 삭제
+    await _storage.delete(key: 'access');
+    await _storage.delete(key: 'refresh');
+    log('User logged out due to authentication failure');
   }
 
 // 깃허브 로그인
@@ -193,13 +250,6 @@ class ApiService {
         );
       },
     );
-  }
-
-  // 로그인 된 계정 로그아웃하기
-  Future<void> logoutCurrentAccount() async {
-    // // 로그아웃 URL 호출하여 세션 초기화
-    await FlutterWebAuth.authenticate(
-        url: 'https://github.com/logout', callbackUrlScheme: "myapp");
   }
 
   final navigatorProvider = Provider<GlobalKey<NavigatorState>>((ref) {
